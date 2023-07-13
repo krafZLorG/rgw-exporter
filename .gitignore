@@ -23,7 +23,6 @@ go.work
 # vscode files
 .vscode
 
-# config files
-*.json
-*.env
-*.yaml
+# build directory
+dpkg-deb/deb/
+dpkg-deb/pkg/

@@ -1,0 +1,15 @@
+access_key: AAA
+secret_key: BBB
+endpoint: https://127.0.0.1
+cluster_fsid: 111111-1111-111111111
+cluster_name: DEFAULT
+cluster_size: 1
+realm: default
+realm_vrf: DEFAULT
+listen_ip: 127.0.0.1
+listen_port: 9240
+master_ip: 127.0.0.1
+usage_collector_interval: 15 
+buckets_collector_interval: 300
+rgw_connection_timeout: 10
+insecure: false

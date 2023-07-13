@@ -1,0 +1,41 @@
+#!/bin/sh
+
+set -e
+
+case "$1" in
+    configure)
+	# create group if not existing
+        if ! getent group rgw-exporter >/dev/null 2>&1; then
+	    echo -n "Adding group rgw-exporter.."
+            addgroup --quiet --system rgw-exporter || true
+	    echo "..done"
+	fi
+	# create user if not existing
+        if ! getent passwd rgw-exporter >/dev/null 2>&1; then
+	    echo -n "Adding system user rgw-exporter.."
+	    adduser --quiet \
+		    --system \
+		    --disabled-password \
+		    --no-create-home \
+		    --home /nonexistent \
+		    --ingroup rgw-exporter \
+		    rgw-exporter || true
+	    echo "..done"
+	fi
+	# adjust file and directory permissions
+	chown root:rgw-exporter /etc/rgw-exporter
+	chmod 750 /etc/rgw-exporter
+	# systemd
+        /usr/bin/systemctl daemon-reload
+    ;;
+    abort-upgrade|abort-remove|abort-deconfigure)
+        :
+    ;;
+
+    *)
+        echo "postinst called with unknown argument '$1'" >&2
+	exit 1
+    ;;
+esac
+
+exit 0

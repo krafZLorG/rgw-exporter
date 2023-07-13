@@ -1,0 +1,19 @@
+[Unit]
+Description=RGW Usage Exporter
+After=network.target
+ConditionPathExists=/etc/rgw-exporter/%i.yaml
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStartPre=/bin/bash -c '/bin/sleep $((RANDOM % 15))'
+ExecStart=/usr/local/bin/rgw-exporter -c /etc/rgw-exporter/%i.yaml
+Restart=on-failure
+RestartSec=5s
+User=rgw-exporter
+Group=rgw-exporter
+
+
+[Install]
+WantedBy=multi-user.target

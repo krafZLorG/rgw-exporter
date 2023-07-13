@@ -1,0 +1,8 @@
+Package: rgw-exporter
+Version: VERSION_TO_REPLACE
+Architecture: amd64
+Maintainer: Dmitry Kvashnin <dm.kvashnin@gmail.com>
+Description: RGW Usage Exporter
+ Export RGW usage and bucket stats to prometheus
+Homepage: https://github.com/krafZLorG/rgw-exporter
+Bugs: https://github.com/krafZLorG/rgw-exporter/issues

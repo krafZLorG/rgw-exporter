@@ -1,0 +1,40 @@
+#!/usr/bin/bash
+
+# Exit the script if any of the commands fail
+set -e
+set -u
+set -o pipefail
+
+if [ $# -gt 0 ]; then
+  NEW_VER="$1"
+else
+  echo "Usage: $(basename $0) <version>"
+  exit 1
+fi
+
+# Set working directory to the location of this script
+cd "$(dirname "${BASH_SOURCE[0]}")"
+STARTDIR="$(pwd)"
+DESTDIR="$STARTDIR/pkg"
+OUTDIR="$STARTDIR/deb"
+
+# Remove potential leftovers from a previous build
+rm -rf "$DESTDIR"
+[ -d "$OUTDIR" ] || mkdir "$OUTDIR"
+
+mkdir -p "$DESTDIR/DEBIAN"
+cp DEBIAN/* "$DESTDIR/DEBIAN/"
+install -Dm 644 rgw-exporter@.service "$DESTDIR/lib/systemd/system/rgw-exporter@.service"
+install -Dm 644 example.yaml "$DESTDIR/etc/rgw-exporter/example.yaml"
+
+[ -d "$DESTDIR/usr/local/bin/" ] || mkdir -p "$DESTDIR/usr/local/bin/"
+# build go
+cd "$STARTDIR/.."
+go mod tidy
+go build -o "$DESTDIR/usr/local/bin/rgw-exporter"
+
+# Modify control file for build
+sed -i "s/VERSION_TO_REPLACE/"$NEW_VER"/" "$DESTDIR/DEBIAN/control"
+
+dpkg-deb --build --root-owner-group "$DESTDIR" "$OUTDIR"
+rm -rf "$DESTDIR"

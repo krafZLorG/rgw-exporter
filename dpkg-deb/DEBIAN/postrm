@@ -1,0 +1,27 @@
+#!/bin/sh
+
+set -e
+
+case "$1" in
+    remove)
+    ;;
+
+    purge)
+	killall -u rgw-exporter
+	find /etc/systemd/system/multi-user.target.wants \
+		-type l -name "rgw-exporter*service" -exec rm {} \;
+        userdel rgw-exporter >/dev/null 2>&1 || true
+        groupdel rgw-exporter >/dev/null 2>&1 || true
+    ;;
+
+    upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+    ;;
+
+    *)
+        echo "postrm called with unknown argument '$1'" >&2
+        exit 1
+    ;;
+esac
+
+exit 0
+
