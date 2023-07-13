@@ -9,7 +9,19 @@ radosgw-admin user create --uid="rgw-exporter" --display-name="RGW Usage Exporte
 radosgw-admin caps add --uid="rgw-exporter" --caps="metadata=read;usage=read;info=read;buckets=read;users=read"
 ```
 
-Configuration file example:
+## Install and Run
+
+```sh
+dpkg -i rgw-exporter_<version>_amd64.deb
+```
+
+Create config /etc/rgw-exporter/<realm>.yaml
+
+```sh
+systemctl start rgw-exportrr@<realm>.service
+```
+
+## Configuration file example
 
 ```yaml
 access_key: 
@@ -31,37 +43,35 @@ insecure: false
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| access_key | rgw admin ops access key | |
-| secret_key | rgw admin ops secret key | |
-| access_key | | |
-| secret_key | | |
-| endpoint | | |
-| cluster_fsid | | |
-| cluster_name | | |
-| cluster_size | | |
-| realm | | |
-| realm_vrf | | |
-| listen_ip | | 127.0.0.1 |
-| listen_port | | 9240 |
-| master_ip | | 127.0.0.1 |
-| usage_collector_interval | | 30 |
-| buckets_collector_interval | | 300 |
-| rgw_connection_timeout | | 10 |
-| insecure | | false |
+| access_key | "access key" value | |
+| secret_key | "secret key" value | |
+| endpoint | RGW endpoint url | |
+| cluster_fsid | `ceph fsid` output | |
+| cluster_name | Human-Readable name (upper case preferred) | |
+| cluster_size | Cluster size in TB | |
+| realm | realm name | |
+| realm_vrf | Human-Readable realm name (upper case preferred) | |
+| listen_ip | Bind IP | 127.0.0.1 |
+| listen_port | Bind Port | 9240 |
+| master_ip | collect stats if this IP is present on the server | 127.0.0.1 |
+| usage_collector_interval | Ops statistics collection interval | 30 |
+| buckets_collector_interval | Buckets statistics collection interval | 300 |
+| rgw_connection_timeout | Connection timeout to RGW endpoint | 10 |
+| insecure | Don't verify SSL certificate | false |
 
-## Launch
+## Debug
 
 Run the following command from the system terminal or shell:
 
-```bash
+```sh
 rgw-exporter -c config.yaml
 ```
 
-## Deployment Recommendations
+## Manual deployment recommendations
 
 Create user
 
-```bash
+```sh
 useradd -r -M -d /nonexistent -s /usr/sbin/nologin rgw-exporter
 ```
 
@@ -87,4 +97,15 @@ Group=rgw-exporter
 
 [Install]
 WantedBy=multi-user.target
+```
+
+## Build recommendations
+
+```sh
+cd ..
+git clone --branch fix_add_tenant https://github.com/krafZLorG/go-ceph.git
+
+cd rgw-exporter
+go mod tidy
+go build
 ```
