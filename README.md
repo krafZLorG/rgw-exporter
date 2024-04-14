@@ -106,6 +106,7 @@ cd ..
 git clone --branch fix_add_tenant https://github.com/krafZLorG/go-ceph.git
 
 cd rgw-exporter
+go mod init github.com/krafZLorG/rgw-exporter
 go mod tidy
-go build
+CGO_ENABLED=0 go build
 ```
