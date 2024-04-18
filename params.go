@@ -25,6 +25,7 @@ type Config struct {
 	RGWConnectionTimeout     int     `yaml:"rgw_connection_timeout"`
 	StartDelay               int     `yaml:"start_delay"`
 	Insecure                 bool    `yaml:"insecure"`
+	SkipWithoutBucket        bool    `yaml:"skip_without_bucket"`
 }
 
 func loadConfig() (*Config, error) {
@@ -37,6 +38,7 @@ func loadConfig() (*Config, error) {
 	config.RGWConnectionTimeout = 10
 	config.Insecure = false
 	config.StartDelay = 30
+	config.SkipWithoutBucket = false
 
 	var configFile string
 	flag.StringVar(&configFile, "c", "", "config file")

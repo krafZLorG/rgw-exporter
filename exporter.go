@@ -137,9 +137,6 @@ func (collector *RGWExporter) Collect(ch chan<- prometheus.Metric) {
 			user = userFullName
 			tenant = ""
 		}
-		if key.Bucket == "" || key.Bucket == "-" {
-			continue
-		}
 		ch <- prometheus.MustNewConstMetric(collector.sent_bytes_total, prometheus.CounterValue, float64(stats.BytesSent),
 			collector.config.ClusterFSID, collector.config.Realm, tenant, user, key.Bucket, key.Category)
 		ch <- prometheus.MustNewConstMetric(collector.received_bytes_total, prometheus.CounterValue, float64(stats.BytesReceived),

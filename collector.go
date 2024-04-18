@@ -83,7 +83,7 @@ func startRGWStatCollector(config *Config) {
 	go func() {
 		for ; ; <-tickerUsage.C {
 			if isMaster(config.MasterIP) {
-				collectUsage(conn)
+				collectUsage(conn, config.SkipWithoutBucket)
 			} else {
 				usageMu.Lock()
 				usageMap = make(map[UsageKey]*UsageStats)
@@ -123,7 +123,7 @@ func getRGWConnection(config *Config) *rgw.API {
 	return conn
 }
 
-func collectUsage(conn *rgw.API) {
+func collectUsage(conn *rgw.API, skipWithoutBucket bool) {
 	start := time.Now()
 
 	today := time.Now().UTC().Format(time.DateOnly)
@@ -135,7 +135,7 @@ func collectUsage(conn *rgw.API) {
 
 	usageMu.Lock()
 	// defer usageMu.Unlock()
-	usageMap = sumUsage(curUsage)
+	usageMap = sumUsage(curUsage, skipWithoutBucket)
 	usageMu.Unlock()
 
 	collectUsageDurationMu.Lock()
@@ -162,13 +162,18 @@ func collectBuckets(conn *rgw.API) {
 	collectBucketsDurationMu.Unlock()
 }
 
-func sumUsage(usage rgw.Usage) map[UsageKey]*UsageStats {
+func sumUsage(usage rgw.Usage, skipWithoutBucket bool) map[UsageKey]*UsageStats {
 
 	usageStatsMap := make(map[UsageKey]*UsageStats)
 
 	// Iterate over the rgw.Usage entries
 	for _, userUsage := range usage.Entries {
 		for _, bucket := range userUsage.Buckets {
+			if skipWithoutBucket {
+				if bucket.Bucket == "" || bucket.Bucket == "-" {
+					continue
+				}
+			}
 			for _, category := range bucket.Categories {
 				key := UsageKey{
 					User:     userUsage.User,
