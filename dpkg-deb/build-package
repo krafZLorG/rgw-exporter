@@ -31,7 +31,7 @@ install -Dm 644 example.yaml "$DESTDIR/etc/rgw-exporter/example.yaml"
 # build go
 cd "$STARTDIR/.."
 go mod tidy
-go build -o "$DESTDIR/usr/local/bin/rgw-exporter"
+CGO_ENABLED=0 go build -o "$DESTDIR/usr/local/bin/rgw-exporter"
 
 # Modify control file for build
 sed -i "s/VERSION_TO_REPLACE/"$NEW_VER"/" "$DESTDIR/DEBIAN/control"
