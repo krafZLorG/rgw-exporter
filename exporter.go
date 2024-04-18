@@ -125,11 +125,10 @@ func (collector *RGWExporter) Collect(ch chan<- prometheus.Metric) {
 
 	usageMu.Lock()
 	defer usageMu.Unlock()
-	// usage
-	for _, entry := range usage.Entries {
-		// Need refactor
+
+	for key, stats := range usageMap {
 		var user, tenant string
-		userFullName := entry.User
+		userFullName := key.User
 		if strings.Contains(userFullName, "$") {
 			userSplit := strings.Split(userFullName, "$")
 			tenant = userSplit[0]
@@ -138,23 +137,19 @@ func (collector *RGWExporter) Collect(ch chan<- prometheus.Metric) {
 			user = userFullName
 			tenant = ""
 		}
-		for _, bucket := range entry.Buckets {
-			if bucket.Bucket == "" || bucket.Bucket == "-" {
-				continue
-			}
-			for _, category := range bucket.Categories {
-				ch <- prometheus.MustNewConstMetric(collector.ops_total, prometheus.CounterValue, float64(category.Ops),
-					collector.config.ClusterFSID, collector.config.Realm, tenant, user, bucket.Bucket, category.Category)
-				ch <- prometheus.MustNewConstMetric(collector.successful_ops_total, prometheus.CounterValue, float64(category.SuccessfulOps),
-					collector.config.ClusterFSID, collector.config.Realm, tenant, user, bucket.Bucket, category.Category)
-				ch <- prometheus.MustNewConstMetric(collector.sent_bytes_total, prometheus.CounterValue, float64(category.BytesSent),
-					collector.config.ClusterFSID, collector.config.Realm, tenant, user, bucket.Bucket, category.Category)
-				ch <- prometheus.MustNewConstMetric(collector.received_bytes_total, prometheus.CounterValue, float64(category.BytesReceived),
-					collector.config.ClusterFSID, collector.config.Realm, tenant, user, bucket.Bucket, category.Category)
-			}
+		if key.Bucket == "" || key.Bucket == "-" {
+			continue
 		}
-
+		ch <- prometheus.MustNewConstMetric(collector.sent_bytes_total, prometheus.CounterValue, float64(stats.BytesSent),
+			collector.config.ClusterFSID, collector.config.Realm, tenant, user, key.Bucket, key.Category)
+		ch <- prometheus.MustNewConstMetric(collector.received_bytes_total, prometheus.CounterValue, float64(stats.BytesReceived),
+			collector.config.ClusterFSID, collector.config.Realm, tenant, user, key.Bucket, key.Category)
+		ch <- prometheus.MustNewConstMetric(collector.ops_total, prometheus.CounterValue, float64(stats.Ops),
+			collector.config.ClusterFSID, collector.config.Realm, tenant, user, key.Bucket, key.Category)
+		ch <- prometheus.MustNewConstMetric(collector.successful_ops_total, prometheus.CounterValue, float64(stats.SuccessfulOps),
+			collector.config.ClusterFSID, collector.config.Realm, tenant, user, key.Bucket, key.Category)
 	}
+
 	// Summary metrics
 	ch <- prometheus.MustNewConstMetric(collector.total_space, prometheus.GaugeValue, collector.config.ClusterSize,
 		collector.config.ClusterFSID, collector.config.ClusterName, collector.config.Realm, collector.config.RealmVrf)
