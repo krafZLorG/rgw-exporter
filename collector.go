@@ -33,8 +33,17 @@ var (
 	collectBucketsDurationMu sync.Mutex
 )
 var (
+	collectUsersDuration   time.Duration
+	collectUsersDurationMu sync.Mutex
+)
+var (
 	usageMap map[UsageKey]*UsageStats
 	usageMu  sync.Mutex
+)
+
+var (
+	users   []UserInfo
+	usersMu sync.Mutex
 )
 
 // Define the structure according to the JSON provided
@@ -59,6 +68,13 @@ type UserUsage struct {
 	Buckets []Bucket `json:"buckets"`
 }
 
+type UserInfo struct {
+	UserId      string `json:"user_id"`
+	Tenant      string `url:"tenant"`
+	DisplayName string `json:"display_name"`
+	Suspended   int    `json:"suspended"`
+}
+
 // Key to identify unique combinations of user, bucket, owner, and category
 type UsageKey struct {
 	User     string
@@ -79,6 +95,7 @@ func startRGWStatCollector(config *Config) {
 	conn := getRGWConnection(config)
 	tickerUsage := time.NewTicker(time.Duration(config.UsageCollectorInterval) * time.Second)
 	tickerBuckets := time.NewTicker(time.Duration(config.BucketsCollectorInterval) * time.Second)
+	tickerUsers := time.NewTicker(time.Duration(config.UsersCollectorInterval) * time.Second)
 
 	go func() {
 		for ; ; <-tickerUsage.C {
@@ -100,6 +117,18 @@ func startRGWStatCollector(config *Config) {
 				bucketsMu.Lock()
 				buckets = nil
 				bucketsMu.Unlock()
+			}
+		}
+	}()
+
+	go func() {
+		for ; ; <-tickerUsers.C {
+			if isMaster(config.MasterIP) && config.UsersCollectorEnable {
+				collectUsers(conn, config.UsersCollectorShowAllUsers)
+			} else {
+				usageMu.Lock()
+				users = nil
+				usageMu.Unlock()
 			}
 		}
 	}()
@@ -160,6 +189,37 @@ func collectBuckets(conn *rgw.API) {
 	collectBucketsDurationMu.Lock()
 	collectBucketsDuration = time.Since(start)
 	collectBucketsDurationMu.Unlock()
+}
+
+func collectUsers(conn *rgw.API, showAllUsers bool) {
+	start := time.Now()
+	var curUsers []UserInfo
+
+	curUsersList, err := conn.GetUsers(context.Background())
+	if err != nil {
+		log.Println("Unable to get users info")
+		return
+	}
+
+	for _, v := range *curUsersList {
+		curUser, err := conn.GetUser(context.Background(), rgw.User{ID: v})
+		if err != nil {
+			log.Println("Unable to get user info")
+			return
+		}
+		user := UserInfo{curUser.ID, curUser.Tenant, curUser.DisplayName, *curUser.Suspended}
+		if showAllUsers || (user.UserId == user.Tenant) {
+			curUsers = append(curUsers, user)
+		}
+	}
+
+	usersMu.Lock()
+	users = curUsers
+	usersMu.Unlock()
+
+	collectUsersDurationMu.Lock()
+	collectUsersDuration = time.Since(start)
+	collectUsersDurationMu.Unlock()
 }
 
 func sumUsage(usage rgw.Usage, skipWithoutBucket bool) map[UsageKey]*UsageStats {
