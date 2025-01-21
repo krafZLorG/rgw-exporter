@@ -9,23 +9,26 @@ import (
 )
 
 type Config struct {
-	AccessKey                string  `yaml:"access_key"`
-	SecretKey                string  `yaml:"secret_key"`
-	Endpoint                 string  `yaml:"endpoint"`
-	ClusterFSID              string  `yaml:"cluster_fsid"`
-	ClusterName              string  `yaml:"cluster_name"`
-	ClusterSize              float64 `yaml:"cluster_size"`
-	Realm                    string  `yaml:"realm"`
-	RealmVrf                 string  `yaml:"realm_vrf"`
-	ListenIP                 string  `yaml:"listen_ip"`
-	ListenPort               int     `yaml:"listen_port"`
-	MasterIP                 string  `yaml:"master_ip"`
-	UsageCollectorInterval   int     `yaml:"usage_collector_interval"`
-	BucketsCollectorInterval int     `yaml:"buckets_collector_interval"`
-	RGWConnectionTimeout     int     `yaml:"rgw_connection_timeout"`
-	StartDelay               int     `yaml:"start_delay"`
-	Insecure                 bool    `yaml:"insecure"`
-	SkipWithoutBucket        bool    `yaml:"skip_without_bucket"`
+	AccessKey                  string  `yaml:"access_key"`
+	SecretKey                  string  `yaml:"secret_key"`
+	Endpoint                   string  `yaml:"endpoint"`
+	ClusterFSID                string  `yaml:"cluster_fsid"`
+	ClusterName                string  `yaml:"cluster_name"`
+	ClusterSize                float64 `yaml:"cluster_size"`
+	Realm                      string  `yaml:"realm"`
+	RealmVrf                   string  `yaml:"realm_vrf"`
+	ListenIP                   string  `yaml:"listen_ip"`
+	ListenPort                 int     `yaml:"listen_port"`
+	MasterIP                   string  `yaml:"master_ip"`
+	UsageCollectorInterval     int     `yaml:"usage_collector_interval"`
+	BucketsCollectorInterval   int     `yaml:"buckets_collector_interval"`
+	RGWConnectionTimeout       int     `yaml:"rgw_connection_timeout"`
+	StartDelay                 int     `yaml:"start_delay"`
+	Insecure                   bool    `yaml:"insecure"`
+	SkipWithoutBucket          bool    `yaml:"skip_without_bucket"`
+	UsersCollectorEnable       bool    `yaml:"users_collector_enable"`
+	UsersCollectorShowAllUsers bool    `yaml:"show_all_users"`
+	UsersCollectorInterval     int     `yaml:"users_collector_interval"`
 }
 
 func loadConfig() (*Config, error) {
@@ -39,6 +42,9 @@ func loadConfig() (*Config, error) {
 	config.Insecure = false
 	config.StartDelay = 30
 	config.SkipWithoutBucket = false
+	config.UsersCollectorEnable = false
+	config.UsersCollectorShowAllUsers = false
+	config.UsersCollectorInterval = 3600
 
 	var configFile string
 	flag.StringVar(&configFile, "c", "", "config file")

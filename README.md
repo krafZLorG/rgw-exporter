@@ -39,6 +39,9 @@ usage_collector_interval:
 buckets_collector_interval:
 rgw_connection_timeout: 
 insecure: false
+users_collector_enable: true
+users_collector_interval: 3600
+show_all_users: false
 ```
 
 | Variable | Description | Default |
@@ -58,6 +61,9 @@ insecure: false
 | buckets_collector_interval | Buckets statistics collection interval | 300 |
 | rgw_connection_timeout | Connection timeout to RGW endpoint | 10 |
 | insecure | Don't verify SSL certificate | false |
+| users_collector_enable | Enable Users collector | false |
+| users_collector_interval | Users Collector Interval | 3600 |
+| show_all_users | Show all users info | false |
 
 ## Debug
 
