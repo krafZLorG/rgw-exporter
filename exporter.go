@@ -111,8 +111,10 @@ func (collector *RGWExporter) Collect(ch chan<- prometheus.Metric) {
 		ch <- prometheus.MustNewConstMetric(collector.bucket_quota_enabled, prometheus.GaugeValue, quotaEnabled,
 			collector.config.ClusterFSID, collector.config.Realm, bucket.Tenant, bucket.Bucket)
 		// bucket_quota_size
-		ch <- prometheus.MustNewConstMetric(collector.bucket_quota_size, prometheus.GaugeValue, float64(*bucket.BucketQuota.MaxSize),
-			collector.config.ClusterFSID, collector.config.Realm, bucket.Tenant, bucket.Bucket, ownerUid)
+		if !customBucketQuotaExist(bucket.Tenant, bucket.Bucket) {
+			ch <- prometheus.MustNewConstMetric(collector.bucket_quota_size, prometheus.GaugeValue, float64(*bucket.BucketQuota.MaxSize),
+				collector.config.ClusterFSID, collector.config.Realm, bucket.Tenant, bucket.Bucket, ownerUid)
+		}
 		// bucket_quota_objects
 		ch <- prometheus.MustNewConstMetric(collector.bucket_quota_objects, prometheus.GaugeValue, float64(*bucket.BucketQuota.MaxObjects),
 			collector.config.ClusterFSID, collector.config.Realm, bucket.Tenant, bucket.Bucket)
@@ -137,6 +139,12 @@ func (collector *RGWExporter) Collect(ch chan<- prometheus.Metric) {
 		}
 		ch <- prometheus.MustNewConstMetric(collector.bucket_objects, prometheus.GaugeValue, bucketObjects,
 			collector.config.ClusterFSID, collector.config.Realm, bucket.Tenant, bucket.Bucket)
+	}
+
+	for _, bucket := range CustomQuotaBuckets {
+		var ownerUid string = ""
+		ch <- prometheus.MustNewConstMetric(collector.bucket_quota_size, prometheus.GaugeValue, float64(bucket.MaxSize),
+			collector.config.ClusterFSID, collector.config.Realm, bucket.Tenant, bucket.Bucket, ownerUid)
 	}
 
 	usageMu.Lock()
@@ -180,4 +188,13 @@ func (collector *RGWExporter) Collect(ch chan<- prometheus.Metric) {
 		collector.config.ClusterFSID, collector.config.Realm)
 	ch <- prometheus.MustNewConstMetric(collector.collector_users_duration_seconds, prometheus.GaugeValue, collectUsersDuration.Seconds(),
 		collector.config.ClusterFSID, collector.config.Realm)
+}
+
+func customBucketQuotaExist(tenant string, bucket string) bool {
+	for _, b := range CustomQuotaBuckets {
+		if tenant == b.Tenant && bucket == b.Bucket {
+			return true
+		}
+	}
+	return false
 }
