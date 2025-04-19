@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 
 	"gopkg.in/yaml.v2"
@@ -29,7 +30,16 @@ type Config struct {
 	UsersCollectorEnable       bool    `yaml:"users_collector_enable"`
 	UsersCollectorShowAllUsers bool    `yaml:"users_collector_show_all_users"`
 	UsersCollectorInterval     int     `yaml:"users_collector_interval"`
+	CustomQuotas               bool    `yaml:"custom_quotas"`
 }
+
+type CustomQuotaBucket struct {
+	Tenant  string `yaml:"tenant"`
+	Bucket  string `yaml:"bucket"`
+	MaxSize int64  `yaml:"max_size"`
+}
+
+var CustomQuotaBuckets []CustomQuotaBucket
 
 func loadConfig() (*Config, error) {
 	config := &Config{}
@@ -62,12 +72,46 @@ func loadConfig() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+
+		}
+	}(file)
 
 	d := yaml.NewDecoder(file)
 	if err := d.Decode(&config); err != nil {
 		return nil, err
 	}
 
+	err = loadCustomQuotas(config)
+	if err != nil {
+		log.Println(err)
+	}
 	return config, nil
+}
+
+func loadCustomQuotas(config *Config) error {
+	quotaFile := "/etc/rgw-exporter/" + config.Realm + "_quotas.yaml"
+
+	_, err := os.Stat(quotaFile)
+	if err != nil {
+		return err
+	}
+	file, err := os.Open(quotaFile)
+	if err != nil {
+		return err
+	}
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			log.Panic(err)
+		}
+	}(file)
+
+	d := yaml.NewDecoder(file)
+	if err := d.Decode(&CustomQuotaBuckets); err != nil {
+		return err
+	}
+	return nil
 }
