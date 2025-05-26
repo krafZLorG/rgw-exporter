@@ -21,12 +21,14 @@ type RGWExporter struct {
 	bucket_size          *prometheus.Desc
 	bucket_actual_size   *prometheus.Desc
 	bucket_objects       *prometheus.Desc
+	bucket_lifecycle     *prometheus.Desc
 	user_suspended       *prometheus.Desc
 	total_space          *prometheus.Desc
 	// collector
-	collector_buckets_duration_seconds *prometheus.Desc
-	collector_usage_duration_seconds   *prometheus.Desc
-	collector_users_duration_seconds   *prometheus.Desc
+	collector_buckets_duration_seconds   *prometheus.Desc
+	collector_usage_duration_seconds     *prometheus.Desc
+	collector_users_duration_seconds     *prometheus.Desc
+	collector_lifecycle_duration_seconds *prometheus.Desc
 }
 
 // constructor for rgwCollector that initializes every descriptor
@@ -54,6 +56,8 @@ func NewRGWExporter(config *Config) *RGWExporter {
 			[]string{"cluster", "realm", "tenant", "bucket"}, nil),
 		bucket_objects: prometheus.NewDesc("radosgw_usage_bucket_objects", "Bucket objecs count",
 			[]string{"cluster", "realm", "tenant", "bucket"}, nil),
+		bucket_lifecycle: prometheus.NewDesc("radosgw_usage_bucket_lifecycle", "Bucket lifecycle days without prefix",
+			[]string{"cluster", "realm", "tenant", "bucket"}, nil),
 		user_suspended: prometheus.NewDesc("radosgw_usage_user_suspended", "1 - suspended, 0 - active",
 			[]string{"cluster", "realm", "tenant", "uid", "display_name"}, nil),
 		total_space: prometheus.NewDesc("radosgw_usage_total_space", "Cluster total space TB",
@@ -63,6 +67,8 @@ func NewRGWExporter(config *Config) *RGWExporter {
 		collector_usage_duration_seconds: prometheus.NewDesc("radosgw_usage_collector_usage_duration_seconds", "Usage collector duration time",
 			[]string{"cluster", "realm"}, nil),
 		collector_users_duration_seconds: prometheus.NewDesc("radosgw_usage_collector_users_duration_seconds", "Users collector duration time",
+			[]string{"cluster", "realm"}, nil),
+		collector_lifecycle_duration_seconds: prometheus.NewDesc("radosgw_usage_collector_lifecycle_duration_seconds", "Lifecycle collector duration time",
 			[]string{"cluster", "realm"}, nil),
 	}
 }
@@ -80,11 +86,13 @@ func (collector *RGWExporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- collector.bucket_size
 	ch <- collector.bucket_actual_size
 	ch <- collector.bucket_objects
+	ch <- collector.bucket_lifecycle
 	ch <- collector.user_suspended
 	ch <- collector.total_space
 	ch <- collector.collector_buckets_duration_seconds
 	ch <- collector.collector_usage_duration_seconds
 	ch <- collector.collector_users_duration_seconds
+	ch <- collector.collector_lifecycle_duration_seconds
 }
 
 // collector must implement the Collect function
@@ -147,6 +155,11 @@ func (collector *RGWExporter) Collect(ch chan<- prometheus.Metric) {
 			collector.config.ClusterFSID, collector.config.Realm, bucket.Tenant, bucket.Bucket, ownerUid)
 	}
 
+	for _, bucket := range bucketsLifecycle {
+		ch <- prometheus.MustNewConstMetric(collector.bucket_lifecycle, prometheus.GaugeValue, float64(bucket.Days),
+			collector.config.ClusterFSID, collector.config.Realm, bucket.Tenant, bucket.Bucket)
+	}
+
 	usageMu.Lock()
 	defer usageMu.Unlock()
 
@@ -187,6 +200,8 @@ func (collector *RGWExporter) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(collector.collector_usage_duration_seconds, prometheus.GaugeValue, collectUsageDuration.Seconds(),
 		collector.config.ClusterFSID, collector.config.Realm)
 	ch <- prometheus.MustNewConstMetric(collector.collector_users_duration_seconds, prometheus.GaugeValue, collectUsersDuration.Seconds(),
+		collector.config.ClusterFSID, collector.config.Realm)
+	ch <- prometheus.MustNewConstMetric(collector.collector_lifecycle_duration_seconds, prometheus.GaugeValue, collectLifecycleDuration.Seconds(),
 		collector.config.ClusterFSID, collector.config.Realm)
 }
 

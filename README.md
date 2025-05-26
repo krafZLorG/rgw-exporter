@@ -21,7 +21,7 @@ Create config /etc/rgw-exporter/<realm>.yaml
 systemctl start rgw-exportrr@<realm>.service
 ```
 
-## Configuration file example
+## Config
 
 ```yaml
 access_key: 
@@ -32,16 +32,18 @@ cluster_name:
 cluster_size:
 realm: 
 realm_vrf:
-listen_ip:
-listen_port: 
-master_ip:
-usage_collector_interval: 
-buckets_collector_interval:
-rgw_connection_timeout: 
-insecure: false
-users_collector_enable: true
+listen_ip: 127.0.0.1
+listen_port: 9240
+master_ip: 127.0.0.1
+usage_collector_interval: 30
+buckets_collector_interval: 300
+rgw_connection_timeout: 60
+insecure: true
+users_collector_enable: false
 users_collector_interval: 3600
 users_collector_show_all_users: false
+lc_collector_enable: false
+lc_collector_interval: 28800
 ```
 
 | Variable | Description | Default |
@@ -108,9 +110,6 @@ WantedBy=multi-user.target
 ## Build recommendations
 
 ```sh
-cd ..
-git clone --branch fix_add_tenant https://github.com/krafZLorG/go-ceph.git
-
 cd rgw-exporter
 go mod init github.com/krafZLorG/rgw-exporter
 go mod tidy
