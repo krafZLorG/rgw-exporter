@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,13 +18,6 @@ var (
 	buckets   []rgw.Bucket
 	bucketsMu sync.Mutex
 )
-
-// var (
-//
-//	usage   rgw.Usage
-//	usageMu sync.Mutex
-//
-// )
 var (
 	collectUsageDuration   time.Duration
 	collectUsageDurationMu sync.Mutex
@@ -44,6 +38,21 @@ var (
 var (
 	users   []UserInfo
 	usersMu sync.Mutex
+)
+
+type BucketLifecycle struct {
+	Tenant string `yaml:"tenant"`
+	Bucket string `yaml:"bucket"`
+	Days   int    `yaml:"days"`
+}
+
+var (
+	bucketsLifecycle   []BucketLifecycle
+	bucketsLifecycleMu sync.Mutex
+)
+var (
+	collectLifecycleDuration   time.Duration
+	collectLifecycleDurationMu sync.Mutex
 )
 
 // Define the structure according to the JSON provided
@@ -96,6 +105,7 @@ func startRGWStatCollector(config *Config) {
 	tickerUsage := time.NewTicker(time.Duration(config.UsageCollectorInterval) * time.Second)
 	tickerBuckets := time.NewTicker(time.Duration(config.BucketsCollectorInterval) * time.Second)
 	tickerUsers := time.NewTicker(time.Duration(config.UsersCollectorInterval) * time.Second)
+	tickerLifecycle := time.NewTicker(time.Duration(config.LifecycleCollectorInterval) * time.Second)
 
 	go func() {
 		for ; ; <-tickerUsage.C {
@@ -129,6 +139,36 @@ func startRGWStatCollector(config *Config) {
 				usageMu.Lock()
 				users = nil
 				usageMu.Unlock()
+			}
+		}
+	}()
+
+	go func() {
+		if config.LifecycleCollectorEnable {
+			for ; ; <-tickerLifecycle.C {
+				if isMaster(config.MasterIP) {
+					collectBucketsLifecycle(conn, config.Realm)
+				}
+			}
+		}
+	}()
+
+	// tick every 60 seconds and if isMaster and no data collect lifecycle
+	go func() {
+		if config.LifecycleCollectorEnable {
+			// delay before starting ticker
+			time.Sleep(60 * time.Second)
+			t := time.NewTicker(60 * time.Second)
+			for ; ; <-t.C {
+				if isMaster(config.MasterIP) {
+					if bucketsLifecycle == nil {
+						collectBucketsLifecycle(conn, config.Realm)
+					}
+				} else {
+					bucketsLifecycleMu.Lock()
+					bucketsLifecycle = nil
+					bucketsLifecycleMu.Unlock()
+				}
 			}
 		}
 	}()
@@ -259,6 +299,39 @@ func sumUsage(usage rgw.Usage, skipWithoutBucket bool) map[UsageKey]*UsageStats 
 		}
 	}
 	return usageStatsMap
+}
+
+func collectBucketsLifecycle(conn *rgw.API, realm string) {
+	start := time.Now()
+	var curBucketsLifecycle []BucketLifecycle
+
+	buckets, err := conn.ListBuckets(context.Background())
+	if err != nil {
+		log.Println("Lifecycle Collector: Unable to get buckets list")
+		return
+	}
+
+	for _, bucket := range buckets {
+		data := BucketLifecycle{}
+		if strings.Contains(bucket, "/") {
+			userSplit := strings.Split(bucket, "/")
+			data.Tenant = userSplit[0]
+			data.Bucket = userSplit[1]
+		} else {
+			data.Tenant = ""
+			data.Bucket = bucket
+		}
+		data.Days = GetBucketLcExpiration(bucket, realm)
+		curBucketsLifecycle = append(curBucketsLifecycle, data)
+	}
+
+	bucketsLifecycleMu.Lock()
+	bucketsLifecycle = curBucketsLifecycle
+	bucketsLifecycleMu.Unlock()
+
+	collectLifecycleDurationMu.Lock()
+	collectLifecycleDuration = time.Since(start)
+	collectLifecycleDurationMu.Unlock()
 }
 
 func isMaster(vrrpIP string) bool {

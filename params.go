@@ -30,6 +30,8 @@ type Config struct {
 	UsersCollectorEnable       bool    `yaml:"users_collector_enable"`
 	UsersCollectorShowAllUsers bool    `yaml:"users_collector_show_all_users"`
 	UsersCollectorInterval     int     `yaml:"users_collector_interval"`
+	LifecycleCollectorEnable   bool    `yaml:"lc_collector_enable"`
+	LifecycleCollectorInterval int     `yaml:"lc_collector_interval"`
 	CustomQuotas               bool    `yaml:"custom_quotas"`
 }
 
@@ -48,13 +50,15 @@ func loadConfig() (*Config, error) {
 	config.MasterIP = "127.0.0.1"
 	config.UsageCollectorInterval = 30
 	config.BucketsCollectorInterval = 300
-	config.RGWConnectionTimeout = 10
-	config.Insecure = false
+	config.RGWConnectionTimeout = 60
+	config.Insecure = true
 	config.StartDelay = 30
 	config.SkipWithoutBucket = false
 	config.UsersCollectorEnable = false
 	config.UsersCollectorShowAllUsers = false
 	config.UsersCollectorInterval = 3600
+	config.LifecycleCollectorEnable = false
+	config.LifecycleCollectorInterval = 28800
 
 	var configFile string
 	flag.StringVar(&configFile, "c", "", "config file")
