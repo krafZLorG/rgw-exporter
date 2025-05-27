@@ -20,21 +20,21 @@ var (
 )
 
 func collectUsers(conn *rgw.API, showAllUsers bool) {
-	debugLog("users collector started")
+	debugLog("users collector: started")
 	start := time.Now()
 
 	var curUsers []UserInfo
 
 	curUsersList, err := conn.GetUsers(context.Background())
 	if err != nil {
-		log.Println("Unable to get users info")
+		log.Println("users collector: unable to get users info")
 		return
 	}
 
 	for _, v := range *curUsersList {
 		curUser, err := conn.GetUser(context.Background(), rgw.User{ID: v})
 		if err != nil {
-			log.Println("Unable to get user info")
+			log.Println("users collector unable to get users info")
 			return
 		}
 		user := UserInfo{curUser.ID, curUser.Tenant, curUser.DisplayName, *curUser.Suspended}
@@ -42,7 +42,7 @@ func collectUsers(conn *rgw.API, showAllUsers bool) {
 			curUsers = append(curUsers, user)
 		}
 	}
-
+	debugLog("users collector %v users", len(*curUsersList))
 	usersMu.Lock()
 	users = curUsers
 	usersMu.Unlock()
@@ -50,5 +50,5 @@ func collectUsers(conn *rgw.API, showAllUsers bool) {
 	collectUsersDurationMu.Lock()
 	collectUsersDuration = time.Since(start)
 	collectUsersDurationMu.Unlock()
-	debugLog("users collector finished in %s", collectUsersDuration)
+	debugLog("users collector sss finished in %s", collectUsersDuration)
 }

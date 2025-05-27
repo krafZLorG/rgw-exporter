@@ -2,13 +2,13 @@ package main
 
 import (
 	"strings"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// RGWExporter pointers to prometheus descriptors for each metric
 type RGWExporter struct {
-	config Config
+	// config Config
 	//usage stat
 	opsTotal           *prometheus.Desc
 	successfulOpsTotal *prometheus.Desc
@@ -96,12 +96,12 @@ func (collector *RGWExporter) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect collector must implement the Collect function
 func (collector *RGWExporter) Collect(ch chan<- prometheus.Metric) {
-
+	start := time.Now()
+	debugLog("exporter: collecting RGW metrics...")
 	bucketsMu.Lock()
 	defer bucketsMu.Unlock()
 
 	for _, bucket := range buckets {
-
 		// bucket_quota_enabled
 		var quotaEnabled = 0.0
 		if *bucket.BucketQuota.Enabled {
@@ -116,47 +116,47 @@ func (collector *RGWExporter) Collect(ch chan<- prometheus.Metric) {
 		}
 
 		ch <- prometheus.MustNewConstMetric(collector.bucketQuotaEnabled, prometheus.GaugeValue, quotaEnabled,
-			collector.config.ClusterFSID, collector.config.Realm, bucket.Tenant, bucket.Bucket)
+			config.ClusterFSID, config.Realm, bucket.Tenant, bucket.Bucket)
 		// bucket_quota_size
 		if !customBucketQuotaExist(bucket.Tenant, bucket.Bucket) {
 			ch <- prometheus.MustNewConstMetric(collector.bucketQuotaSize, prometheus.GaugeValue, float64(*bucket.BucketQuota.MaxSize),
-				collector.config.ClusterFSID, collector.config.Realm, bucket.Tenant, bucket.Bucket, ownerUid)
+				config.ClusterFSID, config.Realm, bucket.Tenant, bucket.Bucket, ownerUid)
 		}
 		// bucket_quota_objects
 		ch <- prometheus.MustNewConstMetric(collector.bucketQuotaObjects, prometheus.GaugeValue, float64(*bucket.BucketQuota.MaxObjects),
-			collector.config.ClusterFSID, collector.config.Realm, bucket.Tenant, bucket.Bucket)
+			config.ClusterFSID, config.Realm, bucket.Tenant, bucket.Bucket)
 		// bucket_size
 		var bucketSize = 0.0
 		if bucket.Usage.RgwMain.Size != nil {
 			bucketSize = float64(*bucket.Usage.RgwMain.Size)
 		}
 		ch <- prometheus.MustNewConstMetric(collector.bucketSize, prometheus.GaugeValue, bucketSize,
-			collector.config.ClusterFSID, collector.config.Realm, bucket.Tenant, bucket.Bucket)
+			config.ClusterFSID, config.Realm, bucket.Tenant, bucket.Bucket)
 		// bucket_actual_size
 		var bucketActualSize = 0.0
 		if bucket.Usage.RgwMain.SizeActual != nil {
 			bucketActualSize = float64(*bucket.Usage.RgwMain.SizeActual)
 		}
 		ch <- prometheus.MustNewConstMetric(collector.bucketActualSize, prometheus.GaugeValue, bucketActualSize,
-			collector.config.ClusterFSID, collector.config.Realm, bucket.Tenant, bucket.Bucket)
+			config.ClusterFSID, config.Realm, bucket.Tenant, bucket.Bucket)
 		// bucket_objects
 		var bucketObjects = 0.0
 		if bucket.Usage.RgwMain.NumObjects != nil {
 			bucketObjects = float64(*bucket.Usage.RgwMain.NumObjects)
 		}
 		ch <- prometheus.MustNewConstMetric(collector.bucketObjects, prometheus.GaugeValue, bucketObjects,
-			collector.config.ClusterFSID, collector.config.Realm, bucket.Tenant, bucket.Bucket)
+			config.ClusterFSID, config.Realm, bucket.Tenant, bucket.Bucket)
 	}
 
 	for _, bucket := range CustomQuotaBuckets {
 		var ownerUid = ""
 		ch <- prometheus.MustNewConstMetric(collector.bucketQuotaSize, prometheus.GaugeValue, float64(bucket.MaxSize),
-			collector.config.ClusterFSID, collector.config.Realm, bucket.Tenant, bucket.Bucket, ownerUid)
+			config.ClusterFSID, config.Realm, bucket.Tenant, bucket.Bucket, ownerUid)
 	}
 
 	for _, bucket := range bucketsLcExpiration {
 		ch <- prometheus.MustNewConstMetric(collector.bucketLcExpiration, prometheus.GaugeValue, float64(bucket.Days),
-			collector.config.ClusterFSID, collector.config.Realm, bucket.Tenant, bucket.Bucket)
+			config.ClusterFSID, config.Realm, bucket.Tenant, bucket.Bucket)
 	}
 
 	usageMu.Lock()
@@ -174,13 +174,13 @@ func (collector *RGWExporter) Collect(ch chan<- prometheus.Metric) {
 			tenant = ""
 		}
 		ch <- prometheus.MustNewConstMetric(collector.sentBytesTotal, prometheus.CounterValue, float64(stats.BytesSent),
-			collector.config.ClusterFSID, collector.config.Realm, tenant, user, key.Bucket, key.Category)
+			config.ClusterFSID, config.Realm, tenant, user, key.Bucket, key.Category)
 		ch <- prometheus.MustNewConstMetric(collector.receivedBytesTotal, prometheus.CounterValue, float64(stats.BytesReceived),
-			collector.config.ClusterFSID, collector.config.Realm, tenant, user, key.Bucket, key.Category)
+			config.ClusterFSID, config.Realm, tenant, user, key.Bucket, key.Category)
 		ch <- prometheus.MustNewConstMetric(collector.opsTotal, prometheus.CounterValue, float64(stats.Ops),
-			collector.config.ClusterFSID, collector.config.Realm, tenant, user, key.Bucket, key.Category)
+			config.ClusterFSID, config.Realm, tenant, user, key.Bucket, key.Category)
 		ch <- prometheus.MustNewConstMetric(collector.successfulOpsTotal, prometheus.CounterValue, float64(stats.SuccessfulOps),
-			collector.config.ClusterFSID, collector.config.Realm, tenant, user, key.Bucket, key.Category)
+			config.ClusterFSID, config.Realm, tenant, user, key.Bucket, key.Category)
 	}
 
 	usersMu.Lock()
@@ -188,20 +188,21 @@ func (collector *RGWExporter) Collect(ch chan<- prometheus.Metric) {
 
 	for _, user := range users {
 		ch <- prometheus.MustNewConstMetric(collector.userSuspended, prometheus.GaugeValue, float64(user.Suspended),
-			collector.config.ClusterFSID, collector.config.Realm, user.Tenant, user.UserId, user.DisplayName)
+			config.ClusterFSID, config.Realm, user.Tenant, user.UserId, user.DisplayName)
 	}
 
 	// Summary metrics
-	ch <- prometheus.MustNewConstMetric(collector.totalSpace, prometheus.GaugeValue, collector.config.ClusterSize,
-		collector.config.ClusterFSID, collector.config.ClusterName, collector.config.Realm, collector.config.RealmVrf)
+	ch <- prometheus.MustNewConstMetric(collector.totalSpace, prometheus.GaugeValue, config.ClusterSize,
+		config.ClusterFSID, config.ClusterName, config.Realm, config.RealmVrf)
 	ch <- prometheus.MustNewConstMetric(collector.collectorBucketsDurationSeconds, prometheus.GaugeValue, collectBucketsDuration.Seconds(),
-		collector.config.ClusterFSID, collector.config.Realm)
+		config.ClusterFSID, config.Realm)
 	ch <- prometheus.MustNewConstMetric(collector.collectorUsageDurationSeconds, prometheus.GaugeValue, collectUsageDuration.Seconds(),
-		collector.config.ClusterFSID, collector.config.Realm)
+		config.ClusterFSID, config.Realm)
 	ch <- prometheus.MustNewConstMetric(collector.collectorUsersDurationSeconds, prometheus.GaugeValue, collectUsersDuration.Seconds(),
-		collector.config.ClusterFSID, collector.config.Realm)
+		config.ClusterFSID, config.Realm)
 	ch <- prometheus.MustNewConstMetric(collector.collectorLcDurationSeconds, prometheus.GaugeValue, collectLcDuration.Seconds(),
-		collector.config.ClusterFSID, collector.config.Realm)
+		config.ClusterFSID, config.Realm)
+	debugLog("exporter: finished in %v", time.Since(start))
 }
 
 func customBucketQuotaExist(tenant string, bucket string) bool {
