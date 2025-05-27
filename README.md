@@ -9,81 +9,66 @@ radosgw-admin user create --uid="rgw-exporter" --display-name="RGW Usage Exporte
 radosgw-admin caps add --uid="rgw-exporter" --caps="metadata=read;usage=read;info=read;buckets=read;users=read"
 ```
 
-## Install and Run
+## Installation
 
 ```sh
 dpkg -i rgw-exporter_<version>_amd64.deb
 ```
 
-Create config /etc/rgw-exporter/<realm>.yaml
+## Configuration
 
-```sh
-systemctl start rgw-exportrr@<realm>.service
+Create a configuration file at: 
+```
+/etc/rgw-exporter/<realm>.yaml
 ```
 
-## Config
+### Example configuration with default values:
 
 ```yaml
-access_key: 
-secret_key: 
-endpoint: 
-cluster_fsid:
-cluster_name:
-cluster_size:
-realm: 
-realm_vrf:
+access_key: "access"
+secret_key: "secret"
+endpoint: http://127.0.0.1:8080
+cluster_fsid: 00000000-0000-0000-0000-000000000000
+cluster_name: DEFAULT
+cluster_size: 1
+realm: default
+realm_vrf: DEFAULT
 listen_ip: 127.0.0.1
 listen_port: 9240
 master_ip: 127.0.0.1
+rgw_connection_timeout: 60
+rgw_connection_check_ssl: false
+usage_skip_without_bucket: false
 usage_collector_interval: 30
 buckets_collector_interval: 300
-rgw_connection_timeout: 60
-insecure: true
-users_collector_enable: false
-users_collector_interval: 3600
-users_collector_show_all_users: false
 lc_collector_enable: false
 lc_collector_interval: 28800
 ```
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| access_key | "access key" value | |
-| secret_key | "secret key" value | |
-| endpoint | RGW endpoint url | |
-| cluster_fsid | `ceph fsid` output | |
-| cluster_name | Human-Readable name (upper case preferred) | |
-| cluster_size | Cluster size in TB | |
-| realm | realm name | |
-| realm_vrf | Human-Readable realm name (upper case preferred) | |
-| listen_ip | Bind IP | 127.0.0.1 |
-| listen_port | Bind Port | 9240 |
-| master_ip | collect stats if this IP is present on the server | 127.0.0.1 |
-| usage_collector_interval | Ops statistics collection interval | 30 |
-| buckets_collector_interval | Buckets statistics collection interval | 300 |
-| rgw_connection_timeout | Connection timeout to RGW endpoint | 10 |
-| insecure | Don't verify SSL certificate | false |
-| users_collector_enable | Enable Users collector | false |
-| users_collector_interval | Users Collector Interval | 3600 |
-| users_collector_show_all_users | Show all users info | false |
+## Running
 
-## Debug
-
-Run the following command from the system terminal or shell:
+Run the rgw-exporter manually:
 
 ```sh
 rgw-exporter -c config.yaml
 ```
 
-## Manual deployment recommendations
-
-Create user
+### Debug mode
 
 ```sh
-useradd -r -M -d /nonexistent -s /usr/sbin/nologin rgw-exporter
+rgw-exporter -d -c config.yaml
 ```
 
-`rgw-exporter@.service` example
+## Systemd service
+
+Start and enable the rgw-exporter as a service:
+
+```sh
+systemctl start rgw-exportrr@<realm>.service
+systemctl enable rgw-exportrr@<realm>.service
+```
+
+Example `rgw-exporter@.service`:
 
 ```systemd.unit
 [Unit]
@@ -107,11 +92,28 @@ Group=rgw-exporter
 WantedBy=multi-user.target
 ```
 
-## Build recommendations
+## Manual deployment recommendations
+
+Create the rgw-exporter system user:
 
 ```sh
+useradd -r -M -d /nonexistent -s /usr/sbin/nologin rgw-exporter
+```
+
+## Build Instructions
+
+```shell
 cd rgw-exporter
 go mod init github.com/krafZLorG/rgw-exporter
 go mod tidy
 CGO_ENABLED=0 go build
+```
+
+## Build and Package as deb
+
+```shell
+cd deb
+./build-package <version>
+
+ls -l deb
 ```
