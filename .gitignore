@@ -23,6 +23,13 @@ go.work
 # vscode files
 .vscode
 
+# idea files
+.idea
+
 # build directory
 dpkg-deb/deb/
 dpkg-deb/pkg/
+
+# binary
+rgw-exporter
+dev.yaml
