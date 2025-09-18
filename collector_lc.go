@@ -68,7 +68,7 @@ func GetBucketLcExpiration(bucket string, realm string) int {
 	start := time.Now()
 	minExpiration := -1
 
-	cmd := exec.Command("radosgw-admin", "--rgw-realm", realm, "lc", "get", "--bucket", bucket)
+	cmd := exec.Command("sudo", "radosgw-admin", "lc", "get", "--rgw-realm", realm, "--bucket", bucket)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Printf("lc collector failed to get stdout pipe: %v", err)
