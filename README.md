@@ -9,6 +9,14 @@ radosgw-admin user create --uid="rgw-exporter" --display-name="RGW Usage Exporte
 radosgw-admin caps add --uid="rgw-exporter" --caps="metadata=read;usage=read;info=read;buckets=read;users=read"
 ```
 
+### ranting Permissions for LC or Multisite Collector
+
+To use the LC or Multisite collector, you need to allow rgw-exporter to run the required radosgw-admin commands without a password. Add the following line to your sudoers file:
+
+```bash
+rgw-exporter ALL=(ALL) NOPASSWD: /usr/bin/radosgw-admin sync status *, /usr/bin/radosgw-admin lc get *
+```
+
 ## Installation
 
 ```sh
@@ -43,6 +51,8 @@ usage_collector_interval: 30
 buckets_collector_interval: 300
 lc_collector_enable: false
 lc_collector_interval: 28800
+multisite_status_collector_enable: false
+multisite_status_collector_interval: 30
 ```
 
 ## Running

@@ -24,11 +24,15 @@ type RGWExporter struct {
 	bucketLcExpiration *prometheus.Desc
 	userSuspended      *prometheus.Desc
 	totalSpace         *prometheus.Desc
+	// Multisite stat
+	multisiteLagMetadata *prometheus.Desc
+	multisiteLagData     *prometheus.Desc
 	// collector
-	collectorBucketsDurationSeconds *prometheus.Desc
-	collectorUsageDurationSeconds   *prometheus.Desc
-	collectorUsersDurationSeconds   *prometheus.Desc
-	collectorLcDurationSeconds      *prometheus.Desc
+	collectorBucketsDurationSeconds         *prometheus.Desc
+	collectorUsageDurationSeconds           *prometheus.Desc
+	collectorUsersDurationSeconds           *prometheus.Desc
+	collectorLcDurationSeconds              *prometheus.Desc
+	collectorMultisiteStatusDurationSeconds *prometheus.Desc
 }
 
 // NewRGWExporter constructor for rgwCollector that initializes every descriptor
@@ -61,6 +65,10 @@ func NewRGWExporter() *RGWExporter {
 			[]string{"cluster", "realm", "tenant", "uid", "display_name"}, nil),
 		totalSpace: prometheus.NewDesc("radosgw_usage_total_space", "Cluster total space TB",
 			[]string{"cluster", "cluster_name", "realm", "realm_vrf"}, nil),
+		multisiteLagMetadata: prometheus.NewDesc("radosgw_usage_multisite_metadata_lag", "Lag of multisite metadata sync in seconds (0 if caught up or master site).",
+			[]string{"cluster", "cluster_name", "realm", "realm_vrf"}, nil),
+		multisiteLagData: prometheus.NewDesc("radosgw_usage_multisite_data_lag", "Lag of multisite data sync in seconds (0 if caught up).",
+			[]string{"cluster", "cluster_name", "realm", "realm_vrf"}, nil),
 		collectorBucketsDurationSeconds: prometheus.NewDesc("radosgw_usage_collector_buckets_duration_seconds", "Buckets collector duration time",
 			[]string{"cluster", "realm"}, nil),
 		collectorUsageDurationSeconds: prometheus.NewDesc("radosgw_usage_collector_usage_duration_seconds", "Usage collector duration time",
@@ -68,6 +76,8 @@ func NewRGWExporter() *RGWExporter {
 		collectorUsersDurationSeconds: prometheus.NewDesc("radosgw_usage_collector_users_duration_seconds", "Users collector duration time",
 			[]string{"cluster", "realm"}, nil),
 		collectorLcDurationSeconds: prometheus.NewDesc("radosgw_usage_collector_lc_duration_seconds", "LC collector duration time",
+			[]string{"cluster", "realm"}, nil),
+		collectorMultisiteStatusDurationSeconds: prometheus.NewDesc("radosgw_usage_collector_multisite_status_duration_seconds", "Multisite status collector duration time",
 			[]string{"cluster", "realm"}, nil),
 	}
 }
@@ -88,10 +98,13 @@ func (collector *RGWExporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- collector.bucketLcExpiration
 	ch <- collector.userSuspended
 	ch <- collector.totalSpace
+	ch <- collector.multisiteLagMetadata
+	ch <- collector.multisiteLagData
 	ch <- collector.collectorBucketsDurationSeconds
 	ch <- collector.collectorUsageDurationSeconds
 	ch <- collector.collectorUsersDurationSeconds
 	ch <- collector.collectorLcDurationSeconds
+	ch <- collector.collectorMultisiteStatusDurationSeconds
 }
 
 // Collect collector must implement the Collect function
@@ -191,6 +204,14 @@ func (collector *RGWExporter) Collect(ch chan<- prometheus.Metric) {
 			config.ClusterFSID, config.Realm, user.Tenant, user.UserId, user.DisplayName)
 	}
 
+	// Multisite metrics
+	if multisiteStatus != nil {
+		ch <- prometheus.MustNewConstMetric(collector.multisiteLagMetadata, prometheus.GaugeValue, float64(multisiteStatus.MetadataLagSeconds),
+			config.ClusterFSID, config.ClusterName, config.Realm, config.RealmVrf)
+		ch <- prometheus.MustNewConstMetric(collector.multisiteLagData, prometheus.GaugeValue, float64(multisiteStatus.DataLagSeconds),
+			config.ClusterFSID, config.ClusterName, config.Realm, config.RealmVrf)
+	}
+
 	// Summary metrics
 	ch <- prometheus.MustNewConstMetric(collector.totalSpace, prometheus.GaugeValue, config.ClusterSize,
 		config.ClusterFSID, config.ClusterName, config.Realm, config.RealmVrf)
@@ -201,6 +222,8 @@ func (collector *RGWExporter) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(collector.collectorUsersDurationSeconds, prometheus.GaugeValue, collectUsersDuration.Seconds(),
 		config.ClusterFSID, config.Realm)
 	ch <- prometheus.MustNewConstMetric(collector.collectorLcDurationSeconds, prometheus.GaugeValue, collectLcDuration.Seconds(),
+		config.ClusterFSID, config.Realm)
+	ch <- prometheus.MustNewConstMetric(collector.collectorMultisiteStatusDurationSeconds, prometheus.GaugeValue, collectMultisiteStatusDuration.Seconds(),
 		config.ClusterFSID, config.Realm)
 	debugLog("exporter: finished in %v", time.Since(start))
 }

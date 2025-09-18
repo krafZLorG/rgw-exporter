@@ -17,6 +17,7 @@ func startRGWStatCollector() {
 	tickerBuckets := time.NewTicker(time.Duration(config.BucketsCollectorInterval) * time.Second)
 	tickerUsers := time.NewTicker(time.Duration(config.UsersCollectorInterval) * time.Second)
 	tickerLc := time.NewTicker(time.Duration(config.LcCollectorInterval) * time.Second)
+	tickerMultisiteStatus := time.NewTicker(time.Duration(config.MultisiteStatusCollectorInterval) * time.Second)
 
 	// usage collector ticker
 	go func() {
@@ -95,6 +96,26 @@ func startRGWStatCollector() {
 		}
 	}()
 
+	// Multisite collector ticker
+	go func() {
+		if config.MultisiteStatusCollectorEnable {
+			debugLog("starting multisie collector ticker")
+			for ; ; <-tickerMultisiteStatus.C {
+				if isMaster() {
+					collectMultisiteStatus(config.Realm)
+				} else if multisiteStatus != nil {
+					debugLog("not master node: clearing multisite status")
+					multisiteStatusMu.Lock()
+					multisiteStatus = nil
+					multisiteStatusMu.Unlock()
+					collectMultisiteStatusDurationMu.Lock()
+					collectMultisiteStatusDuration = time.Duration(0)
+					collectMultisiteStatusDurationMu.Unlock()
+				}
+			}
+		}
+	}()
+
 	// tick every 10 seconds
 	// if instance is master and data is missing, trigger collection
 	go func() {
@@ -122,6 +143,12 @@ func startRGWStatCollector() {
 					if bucketsLcExpiration == nil {
 						debugLog("fast ticker lc collector started")
 						collectBucketsLC(conn, config.Realm)
+					}
+				}
+				if config.MultisiteStatusCollectorEnable {
+					if multisiteStatus == nil {
+						debugLog("fast ticker lc collector started")
+						collectMultisiteStatus(config.Realm)
 					}
 				}
 			}

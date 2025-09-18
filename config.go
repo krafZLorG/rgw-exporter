@@ -8,28 +8,30 @@ import (
 )
 
 type Config struct {
-	AccessKey                  string  `yaml:"access_key"`
-	SecretKey                  string  `yaml:"secret_key"`
-	Endpoint                   string  `yaml:"endpoint"`
-	ClusterFSID                string  `yaml:"cluster_fsid"`
-	ClusterName                string  `yaml:"cluster_name"`
-	ClusterSize                float64 `yaml:"cluster_size"`
-	Realm                      string  `yaml:"realm"`
-	RealmVrf                   string  `yaml:"realm_vrf"`
-	ListenIP                   string  `yaml:"listen_ip"`
-	ListenPort                 int     `yaml:"listen_port"`
-	MasterIP                   string  `yaml:"master_ip"`
-	RGWConnectionTimeout       int     `yaml:"rgw_connection_timeout"`
-	RGWConnectionCheckSSL      bool    `yaml:"rgw_connection_check_ssl"`
-	StartDelay                 int     `yaml:"start_delay"`
-	UsageSkipWithoutBucket     bool    `yaml:"usage_skip_without_bucket"`
-	UsageCollectorInterval     int     `yaml:"usage_collector_interval"`
-	BucketsCollectorInterval   int     `yaml:"buckets_collector_interval"`
-	UsersCollectorEnable       bool    `yaml:"users_collector_enable"`
-	UsersCollectorShowAllUsers bool    `yaml:"users_collector_show_all_users"`
-	UsersCollectorInterval     int     `yaml:"users_collector_interval"`
-	LcCollectorEnable          bool    `yaml:"lc_collector_enable"`
-	LcCollectorInterval        int     `yaml:"lc_collector_interval"`
+	AccessKey                        string  `yaml:"access_key"`
+	SecretKey                        string  `yaml:"secret_key"`
+	Endpoint                         string  `yaml:"endpoint"`
+	ClusterFSID                      string  `yaml:"cluster_fsid"`
+	ClusterName                      string  `yaml:"cluster_name"`
+	ClusterSize                      float64 `yaml:"cluster_size"`
+	Realm                            string  `yaml:"realm"`
+	RealmVrf                         string  `yaml:"realm_vrf"`
+	ListenIP                         string  `yaml:"listen_ip"`
+	ListenPort                       int     `yaml:"listen_port"`
+	MasterIP                         string  `yaml:"master_ip"`
+	RGWConnectionTimeout             int     `yaml:"rgw_connection_timeout"`
+	RGWConnectionCheckSSL            bool    `yaml:"rgw_connection_check_ssl"`
+	StartDelay                       int     `yaml:"start_delay"`
+	UsageSkipWithoutBucket           bool    `yaml:"usage_skip_without_bucket"`
+	UsageCollectorInterval           int     `yaml:"usage_collector_interval"`
+	BucketsCollectorInterval         int     `yaml:"buckets_collector_interval"`
+	UsersCollectorEnable             bool    `yaml:"users_collector_enable"`
+	UsersCollectorShowAllUsers       bool    `yaml:"users_collector_show_all_users"`
+	UsersCollectorInterval           int     `yaml:"users_collector_interval"`
+	LcCollectorEnable                bool    `yaml:"lc_collector_enable"`
+	LcCollectorInterval              int     `yaml:"lc_collector_interval"`
+	MultisiteStatusCollectorEnable   bool    `yaml:"multisite_status_collector_enable"`
+	MultisiteStatusCollectorInterval int     `yaml:"multisite_status_collector_interval"`
 }
 
 var config Config
@@ -115,4 +117,6 @@ func configSetDefaults() {
 	config.UsersCollectorInterval = 3600
 	config.LcCollectorEnable = false
 	config.LcCollectorInterval = 28800
+	config.MultisiteStatusCollectorEnable = false
+	config.MultisiteStatusCollectorInterval = 30
 }
