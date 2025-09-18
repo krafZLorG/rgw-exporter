@@ -133,9 +133,9 @@ func getRGWConnection() *rgw.API {
 	// Verify SSL Certificate
 	var tr *http.Transport
 	if config.RGWConnectionCheckSSL {
-		tr = &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
-	} else {
 		tr = &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: false}}
+	} else {
+		tr = &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 	}
 
 	conn, err := rgw.New(config.Endpoint, config.AccessKey, config.SecretKey,
