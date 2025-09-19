@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"log"
 	"os/exec"
 	"strings"
@@ -91,12 +90,13 @@ func parseMultisiteSyncStatus(output []byte) (*MultisiteSyncStatus, error) {
 		// section tracking
 		if strings.HasPrefix(line, "metadata sync") {
 			currentSection = "metadata"
-			if strings.Contains(line, "no sync (zone is master)") {
-				metaMaster = true
-			}
 		}
 		if strings.HasPrefix(line, "data sync") {
 			currentSection = "data"
+		}
+
+		if strings.Contains(line, "no sync (zone is master)") {
+			metaMaster = true
 		}
 
 		// caught up flags
@@ -107,7 +107,7 @@ func parseMultisiteSyncStatus(output []byte) (*MultisiteSyncStatus, error) {
 			dataCaughtUp = true
 		}
 
-		// if failed to retriev sync info
+		// failed to retrieve sync info
 		if strings.Contains(line, "failed to retrieve sync info") {
 			switch currentSection {
 			case "metadata":
@@ -122,11 +122,6 @@ func parseMultisiteSyncStatus(output []byte) (*MultisiteSyncStatus, error) {
 			parts := strings.Fields(line)
 			if len(parts) >= 6 {
 				ts := parts[5]
-				// strip fractional seconds
-				if i := strings.Index(ts, "."); i != -1 {
-					ts = ts[:i]
-				}
-				// assign based on section
 				switch currentSection {
 				case "metadata":
 					metaOldest = ts
@@ -141,25 +136,35 @@ func parseMultisiteSyncStatus(output []byte) (*MultisiteSyncStatus, error) {
 		return nil, err
 	}
 
-	// parse current time
+	// parse current time, fallback to now UTC
 	curTime, err := time.Parse(time.RFC3339, currentStr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse current time: %v", err)
+		curTime = time.Now().UTC()
+		debugLog("current time not found or invalid, using system UTC: %s", curTime)
+	} else {
+		curTime = curTime.UTC()
+		debugLog("parsed current time (raw=%s, utc=%s)", currentStr, curTime)
 	}
 
 	// compute metadata lag
 	if status.MetadataLagSeconds != -1 && !metaMaster && !metaCaughtUp && metaOldest != "" {
-		oldTime, err := time.Parse("2006-01-02T15:04:05", metaOldest)
-		if err == nil {
-			status.MetadataLagSeconds = int64(curTime.Sub(oldTime).Seconds())
+		oldTime, err := time.Parse("2006-01-02T15:04:05.999999-0700", metaOldest)
+		if err != nil {
+			debugLog("failed to parse metadata oldest: %s, err=%v", metaOldest, err)
+		} else {
+			debugLog("metadata oldest (raw=%s, parsed=%s, utc=%s)", metaOldest, oldTime, oldTime.UTC())
+			status.MetadataLagSeconds = int64(curTime.Sub(oldTime.UTC()).Seconds())
 		}
 	}
 
 	// compute data lag
 	if status.DataLagSeconds != -1 && !dataCaughtUp && dataOldest != "" {
-		oldTime, err := time.Parse("2006-01-02T15:04:05", dataOldest)
-		if err == nil {
-			status.DataLagSeconds = int64(curTime.Sub(oldTime).Seconds())
+		oldTime, err := time.Parse("2006-01-02T15:04:05.999999-0700", dataOldest)
+		if err != nil {
+			debugLog("failed to parse data oldest: %s, err=%v", dataOldest, err)
+		} else {
+			debugLog("data oldest (raw=%s, parsed=%s, utc=%s)", dataOldest, oldTime, oldTime.UTC())
+			status.DataLagSeconds = int64(curTime.Sub(oldTime.UTC()).Seconds())
 		}
 	}
 
