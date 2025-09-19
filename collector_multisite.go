@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"log"
 	"os/exec"
 	"strings"
@@ -65,6 +64,7 @@ func getMultisiteSyncStatus(realm string) (*MultisiteSyncStatus, error) {
 	return curMultisiteSyncStatus, nil
 }
 
+// parseMultisiteSyncStatus parses radosgw-admin sync status output
 func parseMultisiteSyncStatus(output []byte) (*MultisiteSyncStatus, error) {
 	status := &MultisiteSyncStatus{
 		MetadataLagSeconds: 0,
@@ -107,7 +107,7 @@ func parseMultisiteSyncStatus(output []byte) (*MultisiteSyncStatus, error) {
 			dataCaughtUp = true
 		}
 
-		// if failed to retriev sync info
+		// failed to retrieve sync info
 		if strings.Contains(line, "failed to retrieve sync info") {
 			switch currentSection {
 			case "metadata":
@@ -122,11 +122,8 @@ func parseMultisiteSyncStatus(output []byte) (*MultisiteSyncStatus, error) {
 			parts := strings.Fields(line)
 			if len(parts) >= 6 {
 				ts := parts[5]
-				// strip fractional seconds
-				if i := strings.Index(ts, "."); i != -1 {
-					ts = ts[:i]
-				}
-				// assign based on section
+
+				// keep timezone (+0300) if present
 				switch currentSection {
 				case "metadata":
 					metaOldest = ts
@@ -141,24 +138,35 @@ func parseMultisiteSyncStatus(output []byte) (*MultisiteSyncStatus, error) {
 		return nil, err
 	}
 
-	// parse current time
+	// parse current time, fallback to now UTC
 	curTime, err := time.Parse(time.RFC3339, currentStr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse current time: %v", err)
+		curTime = time.Now().UTC()
 	}
+	curTime = curTime.UTC()
 
 	// compute metadata lag
 	if status.MetadataLagSeconds != -1 && !metaMaster && !metaCaughtUp && metaOldest != "" {
-		oldTime, err := time.Parse("2006-01-02T15:04:05", metaOldest)
+		// try parse with fractional seconds + timezone
+		oldTime, err := time.Parse("2006-01-02T15:04:05.999999-0700", metaOldest)
+		if err != nil {
+			// try without fractional seconds
+			oldTime, err = time.Parse("2006-01-02T15:04:05-0700", metaOldest)
+		}
 		if err == nil {
+			oldTime = oldTime.UTC()
 			status.MetadataLagSeconds = int64(curTime.Sub(oldTime).Seconds())
 		}
 	}
 
 	// compute data lag
 	if status.DataLagSeconds != -1 && !dataCaughtUp && dataOldest != "" {
-		oldTime, err := time.Parse("2006-01-02T15:04:05", dataOldest)
+		oldTime, err := time.Parse("2006-01-02T15:04:05.999999-0700", dataOldest)
+		if err != nil {
+			oldTime, err = time.Parse("2006-01-02T15:04:05-0700", dataOldest)
+		}
 		if err == nil {
+			oldTime = oldTime.UTC()
 			status.DataLagSeconds = int64(curTime.Sub(oldTime).Seconds())
 		}
 	}
