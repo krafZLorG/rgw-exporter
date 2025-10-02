@@ -116,8 +116,10 @@ func GetBucketLcExpiration(bucket string, realm string) int {
 					if expirationVal, ok := data["expiration"]; ok {
 						if expFloat, ok := expirationVal.(float64); ok {
 							expiration := int(expFloat)
-							if minExpiration == -1 || expiration < minExpiration {
-								minExpiration = expiration
+							if expiration != 0 {
+								if minExpiration == -1 || expiration < minExpiration {
+									minExpiration = expiration
+								}
 							}
 						}
 					}
