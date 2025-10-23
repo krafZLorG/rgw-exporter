@@ -78,6 +78,14 @@ func GetBucketLcExpiration(bucket string, realm string) int {
 		log.Printf("lc collector failed to start command: %v", err)
 		return -1
 	}
+
+	// Ensure we always reap the process, even on early return
+	defer func() {
+		if err := cmd.Wait(); err != nil {
+			log.Printf("lc collector wait error: %v", err)
+		}
+	}()
+
 	data := bufio.NewReader(stdout)
 
 	// radosgw-admin lc get command returns invalid JSON
