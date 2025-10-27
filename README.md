@@ -122,7 +122,7 @@ CGO_ENABLED=0 go build
 ## Build and Package as deb
 
 ```shell
-cd deb
+cd dpkg-deb
 ./build-package <version>
 
 ls -l deb
